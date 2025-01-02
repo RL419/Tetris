@@ -14,27 +14,39 @@ const board = Array.from(Array(ROWS), () => new Array(COLUMNS));
 const PIECES = {
     straight : {
         color : 'cyan',
-        startingCoords : [[0, 3], [0, 4], [0, 5], [0, 6]]
+        startingCoords : [[0, 3], [0, 4], [0, 5], [0, 6]],
+        center : [0, 4],
+        squareDimension : 4
     },
     left_L : {
         color : 'blue',
-        startingCoords : [[0, 3], [1, 3], [1, 4], [1, 5]]
+        startingCoords : [[0, 3], [1, 3], [1, 4], [1, 5]],
+        center : [1, 4],
+        squareDimension : 3
     },
     right_L : {
         color : 'orange',
-        startingCoords : [[1, 3], [1, 4], [1, 5], [0, 5]]
+        startingCoords : [[1, 3], [1, 4], [1, 5], [0, 5]],
+        center : [1, 4],
+        squareDimension : 3
     },
     left_Z : {
         color : 'red',
-        startingCoords : [[0, 3], [0, 4], [1, 4], [1, 5]]
+        startingCoords : [[0, 3], [0, 4], [1, 4], [1, 5]],
+        center : [1, 4],
+        squareDimension : 3
     },
     right_Z : {
         color : 'green',
-        startingCoords : [[1, 3], [1, 4], [0, 4], [0, 5]]
+        startingCoords : [[1, 3], [1, 4], [0, 4], [0, 5]],
+        center : [1, 4],
+        squareDimension : 3
     },
     T : {
         color : 'pink',
-        startingCoords : [[1, 3], [1, 4], [1, 5], [0, 4]]
+        startingCoords : [[1, 3], [1, 4], [1, 5], [0, 4]],
+        center : [1, 4],
+        squareDimension : 3
     },
     square : {
         color : 'yellow',
@@ -68,30 +80,60 @@ document.body.addEventListener('keydown', (event) => {
         for (let [x, y] of currPiece.startingCoords) {
             board[x][y] = currPiece.color;
         }
+        clearInterval(runGame);
         currPiece = structuredClone(PIECES[nextPiece]);
         nextPiece = getNextBlock();
         eliminateRows();
+        runGame = setInterval(descendPiece, 1000);
     } else if (event.key === 'ArrowRight' || event.key === 'd') {
-        if (canRight()) {
-            for (let i = 0; i < 4; i++) {
-                currPiece.startingCoords[i][1]++;
+        const new_coords = [];
+        for (let [x, y] of currPiece.startingCoords) {
+            if (y + 1 === COLUMNS || board[x][y + 1]) {
+                return;
             }
+            new_coords.push([x, y + 1])
+        }
+        currPiece.startingCoords = new_coords;
+        if (currPiece.center) {
+            currPiece.center[1]++;
         }
     } else if (event.key === 'ArrowLeft' || event.key === 'a') {
-        if (canLeft()) {
-            for (let i = 0; i < 4; i++) {
-                currPiece.startingCoords[i][1]--;
+        const new_coords = [];
+        for (let [x, y] of currPiece.startingCoords) {
+            if (y === 0 || board[x][y - 1]) {
+                return;
             }
+            new_coords.push([x, y - 1])
+        }
+        currPiece.startingCoords = new_coords;
+        if (currPiece.center) {
+            currPiece.center[1]--;
         }
     } else if (event.key === 'ArrowDown' || event.key === 's') {
         if (canDescend()) {
             for (let i = 0; i < 4; i++) {
                 currPiece.startingCoords[i][0]++;
             }
+            if (currPiece.center) {
+                currPiece.center[0]++;
+            }
         }
     } else if (event.key === 'ArrowUp' || event.key === 'w') {
-        for (let i = 0; i < 4; i++) {
-            currPiece.startingCoords[i][1]--;
+        if (currPiece.center) {
+            const new_coords = [];
+            for (let [i, j] of currPiece.startingCoords) {
+                // To rotate a nxn square matrix clockwise by 90 degrees [i][j] => [j][n-1-i]
+                // Turn the 3x3 square where the piece is located to zero index => [j - (center[1] - 1)][3 - 1 - (i - (center[0] - 1))]
+                // To relocate the square back to it position => [j - center[1] + 1 + (center[0] - 1)][3 - 1 - i + center[0] - 1 + (center[1] - 1)]
+                // Which simplifies to [j - center[1] + center[0]][center[0] + center[1] - i]
+                // Or [j - center[1] + center[0]][n - 3 - i + center[0] + center[1]]
+                const x = j - currPiece.center[1] + currPiece.center[0], y = currPiece.squareDimension - 3 - i + currPiece.center[0] + currPiece.center[1];
+                if (x < 0 || x >= ROWS || y < 0 || y >= COLUMNS || board[x][y]) {
+                    return;
+                }
+                new_coords.push([x, y])
+            }
+            currPiece.startingCoords = new_coords;
         }
     } else if (event.key === 'Escape') {
         start = false;
@@ -102,7 +144,7 @@ document.body.addEventListener('keydown', (event) => {
         message.innerHTML = 'Game Paused';
     }
     setDisplay();
-})
+});
 
 function isFull(row) {
     for (let block of row) {
@@ -165,6 +207,9 @@ function getNextBlock() {
 
 function descendPiece() {
     if (canDescend()) {
+        if (currPiece.center) {
+            currPiece.center[0]++;
+        }
         for (let i = 0; i < 4; i++) {
             currPiece.startingCoords[i][0]++;
         }
@@ -198,40 +243,13 @@ function includes(i, j) {
     return false
 }
 
-function canLeft() {
-    for (let [x, y] of currPiece.startingCoords) {
-        if (y === 0 || board[x][y - 1]) {
+function canRotate() {
+    const [x, y] = currPiece.startingCoords[1];
+    for (let [xi, yi] of currPiece.startingCoords) {
+        const dx = xi - x, dy = yi - y;
+        if (x + dy < 0 || x + dy >= ROWS || y + dx < 0 || y + dx >= COLUMNS || board[x + dy][y + dx]) {
             return false;
         }
     }
     return true;
 }
-
-function canRight() {
-    for (let [x, y] of currPiece.startingCoords) {
-        if (y + 1 === COLUMNS || board[x][y + 1]) {
-            return false;
-        }
-    }
-    return true;
-}
-
-// board[18][0] = 'cyan';
-// board[18][1] = 'cyan';
-// board[18][2] = 'cyan';
-// board[18][3] = 'cyan';
-// board[18][4] = 'yellow';
-// board[18][5] = 'yellow';
-// board[17][4] = 'yellow';
-// board[17][5] = 'yellow';
-
-// board[19][0] = 'pink';
-// board[19][1] = 'pink';
-// board[19][2] = 'pink';
-// board[19][3] = 'pink';
-// board[19][4] = 'pink';
-// board[19][5] = 'pink';
-// board[19][6] = 'pink';
-// board[19][7] = 'pink';
-// board[19][8] = 'pink';
-// board[19][9] = 'pink';
