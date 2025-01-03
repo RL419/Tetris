@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Audiowide&display=swap');
+
 * {
     padding: 0;
     margin: 0;
@@ -11,12 +13,16 @@ body {
     height: 100vh;
     background-color: black;
     color: white;
+    font-family: "Audiowide", serif;
+    font-weight: 400;
+    font-size: 2rem;
 }
 
-#menu {
+.menu {
     border: none;
     width: 100%;
     text-align: center;
+    background-color: transparent;
 }
 
 #message {
@@ -25,6 +31,7 @@ body {
 }
 
 button {
+    display: none;
     border-radius: 50%;
     font-size: 5rem;
     aspect-ratio: 1 / 1;
@@ -32,16 +39,25 @@ button {
     width: 7rem;
 }
 
-.restart {
-    display: none;
+.start {
+    display: inline;
 }
 
-.paused {
+.restart {
     display: inline;
 }
 
 .started {
     display: none;
+}
+
+.paused {
+    display: block;
+    height: 30%;
+    margin: auto;
+    position: absolute;
+    background-color: darkblue;
+    opacity: 0.6;
 }
 
 main {
@@ -51,7 +67,7 @@ main {
 .tetris {
     display: grid;
     grid-template-columns: 10fr 6fr;
-    grid-template-rows: 2fr 4fr 4fr 12fr;
+    grid-template-rows: 2fr 5fr 4fr 11fr;
 }
 
 .game {
@@ -69,6 +85,16 @@ main {
     border: 1px white solid;
     grid-column: 2 / 3;
     grid-row: 2 / 3;
+    display: grid;
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 4fr;
+}
+
+#image {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    grid-template-rows: repeat(4, 1fr);
+    border: none;
 }
 
 .score {
@@ -113,4 +139,3 @@ div {
 .yellow {
     background-color: yellow;
 }
-

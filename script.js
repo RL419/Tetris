@@ -1,4 +1,4 @@
-let start = false;
+let state;
 
 const startButton = document.getElementById('start');
 const menu = document.getElementById('menu');
@@ -11,64 +11,71 @@ const game = document.getElementById('game');
 const ROWS = 22, COLUMNS = 10;
 const board = Array.from(Array(ROWS), () => new Array(COLUMNS));
 
+const nextPieceImage = document.getElementById('image');
+
 const PIECES = {
     straight : {
         color : 'cyan',
-        startingCoords : [[0, 3], [0, 4], [0, 5], [0, 6]],
-        center : [0, 4],
+        startingCoords : [[1, 3], [1, 4], [1, 5], [1, 6]],
+        imageCoords : [[1, 1], [1, 2], [1, 3], [1, 4]],
+        center : [1, 4],
         squareDimension : 4
     },
     left_L : {
         color : 'blue',
         startingCoords : [[0, 3], [1, 3], [1, 4], [1, 5]],
+        imageCoords : [[1, 1], [2, 1], [2, 2], [2, 3]],
         center : [1, 4],
         squareDimension : 3
     },
     right_L : {
         color : 'orange',
         startingCoords : [[1, 3], [1, 4], [1, 5], [0, 5]],
+        imageCoords : [[2, 1], [2, 2], [2, 3], [1, 3]],
         center : [1, 4],
         squareDimension : 3
     },
     left_Z : {
         color : 'red',
         startingCoords : [[0, 3], [0, 4], [1, 4], [1, 5]],
+        imageCoords : [[1, 1], [1, 2], [2, 2], [2, 3]],
         center : [1, 4],
         squareDimension : 3
     },
     right_Z : {
         color : 'green',
         startingCoords : [[1, 3], [1, 4], [0, 4], [0, 5]],
+        imageCoords : [[2, 1], [2, 2], [1, 2], [1, 3]],
         center : [1, 4],
         squareDimension : 3
     },
     T : {
         color : 'pink',
         startingCoords : [[1, 3], [1, 4], [1, 5], [0, 4]],
+        imageCoords : [[2, 1], [2, 2], [2, 3], [1, 2]],
         center : [1, 4],
         squareDimension : 3
     },
     square : {
         color : 'yellow',
-        startingCoords : [[0, 4], [0, 5], [1, 4], [1, 5]]
+        startingCoords : [[0, 4], [0, 5], [1, 4], [1, 5]],
+        imageCoords : [[1, 2], [1, 3], [2, 2], [2, 3]]
     }
 }
 
-let currPiece, nextPiece = getNextBlock();
+let currPiece, nextPiece = structuredClone(PIECES[getNextBlock()]);
 let runGame;
 
-// setInterval(descendPiece, 1000);
-startButton.addEventListener('click', () => {
-    start = true;
-    menu.classList.add('started');
-    main.classList.add('tetris');
-    setDisplay();
-    if (!currPiece) {
-        currPiece = structuredClone(PIECES[nextPiece]);
-        nextPiece = getNextBlock();
+startButton.addEventListener('click', startGame);
+
+restartButton.addEventListener('click', () => {
+    for (let i = 0; i < ROWS; i++) {
+        board[i] = new Array(COLUMNS);
     }
-    runGame = setInterval(descendPiece, 1000);
-})
+    currPiece = undefined;
+    nextPiece = structuredClone(PIECES[getNextBlock()]);
+    startGame();
+});
 
 document.body.addEventListener('keydown', (event) => {
     if (event.key === ' ') {
@@ -81,15 +88,19 @@ document.body.addEventListener('keydown', (event) => {
             board[x][y] = currPiece.color;
         }
         clearInterval(runGame);
-        currPiece = structuredClone(PIECES[nextPiece]);
-        nextPiece = getNextBlock();
+        currPiece = nextPiece;
+        nextPiece = structuredClone(PIECES[getNextBlock()]);
+        generateImage();
         eliminateRows();
+        if (!isEmpty(board[0]) || !isEmpty(board[1])) {
+            return gameOver();
+        }
         runGame = setInterval(descendPiece, 1000);
     } else if (event.key === 'ArrowRight' || event.key === 'd') {
         const new_coords = [];
         for (let [x, y] of currPiece.startingCoords) {
             if (y + 1 === COLUMNS || board[x][y + 1]) {
-                return;
+                return setDisplay();
             }
             new_coords.push([x, y + 1])
         }
@@ -101,7 +112,7 @@ document.body.addEventListener('keydown', (event) => {
         const new_coords = [];
         for (let [x, y] of currPiece.startingCoords) {
             if (y === 0 || board[x][y - 1]) {
-                return;
+                return setDisplay();
             }
             new_coords.push([x, y - 1])
         }
@@ -129,30 +140,54 @@ document.body.addEventListener('keydown', (event) => {
                 // Or [j - center[1] + center[0]][n - 3 - i + center[0] + center[1]]
                 const x = j - currPiece.center[1] + currPiece.center[0], y = currPiece.squareDimension - 3 - i + currPiece.center[0] + currPiece.center[1];
                 if (x < 0 || x >= ROWS || y < 0 || y >= COLUMNS || board[x][y]) {
-                    return;
+                    return setDisplay();
                 }
                 new_coords.push([x, y])
             }
             currPiece.startingCoords = new_coords;
         }
     } else if (event.key === 'Escape') {
-        start = false;
-        clearInterval(runGame);
-        menu.classList.remove('started');
-        main.classList.remove('tetris');
-        restartButton.classList.add('paused');
-        message.innerHTML = 'Game Paused';
+        if (state === 'STARTED') {
+            state = 'PAUSED';
+            clearInterval(runGame);
+            menu.classList.add('paused');
+            message.innerHTML = 'Game Paused';
+        } else if (state === 'Paused') {
+            startGame();
+        }
     }
     setDisplay();
 });
 
-function isFull(row) {
-    for (let block of row) {
-        if (!block) {
-            return false;
-        }
+
+function startGame() {
+    state = 'STARTED';
+    menu.classList.add('started');
+    menu.classList.remove('paused')
+    main.classList.add('tetris');
+    restartButton.classList.add('restart');
+    if (!currPiece) {
+        currPiece = nextPiece;
+        nextPiece = structuredClone(PIECES[getNextBlock()]);
+        generateImage();
     }
-    return true;
+    runGame = setInterval(descendPiece, 1000);
+    setDisplay();
+}
+
+function gameOver() {
+    clearInterval(runGame);
+    restartButton.classList.remove('restart');
+    menu.classList.add('paused');
+    message.innerHTML = 'Game Over';
+}
+
+function generateImage() {
+    let curr = '';
+    for (let [x, y] of nextPiece.imageCoords) {
+        curr += `<div class="${nextPiece.color}" style="grid-row:${x+1}/${x+2};grid-column:${y+1}/${y+2};"></div>`
+    }
+    nextPieceImage.innerHTML = curr;
 }
 
 function setDisplay() {
@@ -217,14 +252,36 @@ function descendPiece() {
         for (let [x, y] of currPiece.startingCoords) {
             board[x][y] = currPiece.color;
         }
-        currPiece = structuredClone(PIECES[nextPiece]);
-        nextPiece = getNextBlock();
+        currPiece = nextPiece;
+        nextPiece = structuredClone(PIECES[getNextBlock()]);
+        generateImage();
         eliminateRows();
+        if (!isEmpty(board[0]) || !isEmpty(board[1])) {
+            return gameOver();
+        }
     }
     setDisplay();
 }
 
 // Utility functions
+function isFull(row) {
+    for (let block of row) {
+        if (!block) {
+            return false;
+        }
+    }
+    return true;
+}
+
+function isEmpty(row) {
+    for (let block of row) {
+        if (block) {
+            return false;
+        }
+    }
+    return true;
+}
+
 function canDescend() {
     for (let [x, y] of currPiece.startingCoords) {
         if (x + 1 === ROWS || board[x + 1][y]) {
