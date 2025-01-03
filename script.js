@@ -13,6 +13,12 @@ const board = Array.from(Array(ROWS), () => new Array(COLUMNS));
 
 const nextPieceImage = document.getElementById('image');
 
+const currScoreDisplay = document.getElementById('curr-score');
+const highestScoreDisplay = document.getElementById('highest-score');
+
+let highestScore = Number(localStorage.getItem('highest-score'));
+highestScoreDisplay.innerHTML = highestScore || 0;
+
 const PIECES = {
     straight : {
         color : 'cyan',
@@ -65,6 +71,9 @@ const PIECES = {
 
 let currPiece, nextPiece = structuredClone(PIECES[getNextBlock()]);
 let runGame;
+let score = 0
+let lastMoveMultiplier;
+let sameNumElimination, streak = 0;
 
 startButton.addEventListener('click', startGame);
 
@@ -152,7 +161,7 @@ document.body.addEventListener('keydown', (event) => {
             clearInterval(runGame);
             menu.classList.add('paused');
             message.innerHTML = 'Game Paused';
-        } else if (state === 'Paused') {
+        } else if (state === 'PAUSED') {
             startGame();
         }
     }
@@ -163,9 +172,11 @@ document.body.addEventListener('keydown', (event) => {
 function startGame() {
     state = 'STARTED';
     menu.classList.add('started');
-    menu.classList.remove('paused')
+    menu.classList.remove('paused');
+    menu.classList.remove('game-over');
     main.classList.add('tetris');
-    restartButton.classList.add('restart');
+    restartButton.classList.remove('hide');
+    startButton.classList.remove('hide')
     if (!currPiece) {
         currPiece = nextPiece;
         nextPiece = structuredClone(PIECES[getNextBlock()]);
@@ -177,9 +188,14 @@ function startGame() {
 
 function gameOver() {
     clearInterval(runGame);
-    restartButton.classList.remove('restart');
-    menu.classList.add('paused');
+    startButton.classList.add('hide');
+    menu.classList.add('game-over');
     message.innerHTML = 'Game Over';
+    if (score > highestScore) {
+        highestScore = score;
+        highestScoreDisplay.innerHTML = highestScore;
+        localStorage.setItem('highest-score', highestScore);
+    }
 }
 
 function generateImage() {
@@ -210,13 +226,34 @@ function setDisplay() {
 
 function eliminateRows() {
     let i = ROWS - 1;
+    let rowsEliminated = 0;
     for (let count = 0; count < ROWS; count++) {
         if (isFull(board[i])) {
+            rowsEliminated++;
             board.splice(i, 1);
             board.unshift(new Array(COLUMNS));
         } else {
             i--;
         }
+    }
+    if (rowsEliminated) {
+        let cur_score = rowsEliminated * 100;
+        if (sameNumElimination === rowsEliminated) {
+            streak ++;
+            cur_score += streak * 20;
+        } else {
+            lastEliminationCount = rowsEliminated;
+            streak = 0;
+        }
+
+        if (lastMoveMultiplier) {
+            cur_score *= lastMoveMultiplier;
+            lastMoveMultiplier *= rowsEliminated;
+        }
+        score += cur_score;
+        currScoreDisplay.innerHTML = score;
+    } else {
+        lastMoveMultiplier = 0;
     }
 }
 
