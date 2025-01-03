@@ -19,6 +19,11 @@ const highestScoreDisplay = document.getElementById('highest-score');
 let highestScore = Number(localStorage.getItem('highest-score'));
 highestScoreDisplay.innerHTML = highestScore || 0;
 
+const themeMusic = document.getElementById('theme-music');
+const gameOverMusic = document.getElementById('game-over');
+const placeBlockMusic = document.getElementById('place-block');
+const eliminateMusic = document.getElementById('eliminate');
+
 const PIECES = {
     straight : {
         color : 'cyan',
@@ -83,6 +88,8 @@ restartButton.addEventListener('click', () => {
     }
     currPiece = undefined;
     nextPiece = structuredClone(PIECES[getNextBlock()]);
+    score = 0;
+    currScoreDisplay.innerHTML = score;
     startGame();
 });
 
@@ -97,6 +104,8 @@ document.body.addEventListener('keydown', (event) => {
             board[x][y] = currPiece.color;
         }
         clearInterval(runGame);
+        placeBlockMusic.play();
+        setDisplay();
         currPiece = nextPiece;
         nextPiece = structuredClone(PIECES[getNextBlock()]);
         generateImage();
@@ -158,6 +167,7 @@ document.body.addEventListener('keydown', (event) => {
     } else if (event.key === 'Escape') {
         if (state === 'STARTED') {
             state = 'PAUSED';
+            themeMusic.pause();
             clearInterval(runGame);
             menu.classList.add('paused');
             message.innerHTML = 'Game Paused';
@@ -171,6 +181,8 @@ document.body.addEventListener('keydown', (event) => {
 
 function startGame() {
     state = 'STARTED';
+    themeMusic.play();
+    document.body.classList.add('in-game');
     menu.classList.add('started');
     menu.classList.remove('paused');
     menu.classList.remove('game-over');
@@ -188,6 +200,8 @@ function startGame() {
 
 function gameOver() {
     clearInterval(runGame);
+    themeMusic.pause();
+    gameOverMusic.play();
     startButton.classList.add('hide');
     menu.classList.add('game-over');
     message.innerHTML = 'Game Over';
@@ -201,7 +215,7 @@ function gameOver() {
 function generateImage() {
     let curr = '';
     for (let [x, y] of nextPiece.imageCoords) {
-        curr += `<div class="${nextPiece.color}" style="grid-row:${x+1}/${x+2};grid-column:${y+1}/${y+2};"></div>`
+        curr += `<div class="block ${nextPiece.color}" style="grid-row:${x+1}/${x+2};grid-column:${y+1}/${y+2};"></div>`
     }
     nextPieceImage.innerHTML = curr;
 }
@@ -211,13 +225,13 @@ function setDisplay() {
     for (let i = 0; i < ROWS; i++) {
         for (let j = 0; j < COLUMNS; j++) {
             if (board[i][j]) {
-                curr += `<div class="${board[i][j]}"></div>`
+                curr += `<div class="block ${board[i][j]}"></div>`
             } else if (currPiece && includes(i, j)) {
-                curr += `<div class="${currPiece.color}"></div>`
+                curr += `<div class="block ${currPiece.color}"></div>`
             } else if (i === 0 || i === 1) {
                 curr += '<div class="blank"></div>'
             } else {
-                curr += '<div></div>'
+                curr += '<div class="block"></div>'
             }
         }
     }
@@ -237,18 +251,21 @@ function eliminateRows() {
         }
     }
     if (rowsEliminated) {
+        eliminateMusic.play();
         let cur_score = rowsEliminated * 100;
         if (sameNumElimination === rowsEliminated) {
             streak ++;
             cur_score += streak * 20;
         } else {
-            lastEliminationCount = rowsEliminated;
+            sameNumElimination = rowsEliminated;
             streak = 0;
         }
 
         if (lastMoveMultiplier) {
             cur_score *= lastMoveMultiplier;
             lastMoveMultiplier *= rowsEliminated;
+        } else {
+            lastMoveMultiplier = rowsEliminated;
         }
         score += cur_score;
         currScoreDisplay.innerHTML = score;
@@ -289,6 +306,9 @@ function descendPiece() {
         for (let [x, y] of currPiece.startingCoords) {
             board[x][y] = currPiece.color;
         }
+        clearInterval(runGame);
+        placeBlockMusic.play();
+        setDisplay();
         currPiece = nextPiece;
         nextPiece = structuredClone(PIECES[getNextBlock()]);
         generateImage();
@@ -296,6 +316,7 @@ function descendPiece() {
         if (!isEmpty(board[0]) || !isEmpty(board[1])) {
             return gameOver();
         }
+        runGame = setInterval(descendPiece, 1000);
     }
     setDisplay();
 }

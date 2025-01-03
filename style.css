@@ -12,10 +12,17 @@ body {
     align-items: center;
     height: 100vh;
     background-color: black;
+    background-image: url('images/background.jpg');
+    background-position-y: bottom;
     color: white;
     font-family: "Audiowide", serif;
     font-weight: 400;
     font-size: 2rem;
+}
+
+.in-game {
+    background-image: url('images/in_game_background.png');
+    background-size: contain;
 }
 
 .menu {
@@ -42,11 +49,7 @@ button {
     width: 7rem;
 }
 
-.hide {
-    display: none;
-}
-
-.started {
+main, .hide, .started {
     display: none;
 }
 
@@ -58,10 +61,6 @@ button {
 .game-over {
     display: block;
     background-color: darkred;
-}
-
-main {
-    display: none;
 }
 
 .tetris {
@@ -106,13 +105,14 @@ main {
     grid-template-rows: repeat(4, 1fr);
 }
 
-div {
+.block {
     background-color: black;
     border: 1px darkgray solid;
 }
 
 .blank {
     border: none;
+    background-color: transparent;
 }
 
 .cyan {
